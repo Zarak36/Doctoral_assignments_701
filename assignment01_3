@@ -1,0 +1,74 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+
+void readMatrix(const std::string& filename,
+std::vector<std::vector<int>>& matrix) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file");
+    }
+
+    int value;
+    std::vector<int> row;
+    while (file >> value) {
+        row.push_back(value);
+        if (file.peek() == '\n' || file.eof()) {
+            matrix.push_back(row);
+            row.clear();
+        }
+    }
+
+    file.close();
+}
+
+bool verifyMatrices(const std::vector<std::vector<int>>& A, const
+std::vector<std::vector<int>>& B, const std::vector<std::vector<int>>&
+C) {
+    if (A.size() != B.size() || A.size() != C.size() || A[0].size() !=
+B[0].size() || A[0].size() != C[0].size()) {
+        return false;
+    }
+
+    for (size_t i = 0; i < A.size(); ++i) {
+        for (size_t j = 0; j < A[0].size(); ++j) {
+            if (A[i][j] + B[i][j] != C[i][j]) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 7 || std::string(argv[1]) != "-a" ||
+std::string(argv[3]) != "-b" || std::string(argv[5]) != "-c") {
+        std::cerr << "Usage: " << argv[0] << " -a <fileA> -b <fileB>
+-c <fileC>" << std::endl;
+        return 1;
+    }
+
+    std::string fileA = argv[2];
+    std::string fileB = argv[4];
+    std::string fileC = argv[6];
+
+    std::vector<std::vector<int>> A, B, C;
+
+    try {
+        readMatrix(fileA, A);
+        readMatrix(fileB, B);
+        readMatrix(fileC, C);
+
+        if (verifyMatrices(A, B, C)) {
+            std::cout << "CORRECT" << std::endl;
+        } else {
+            std::cout << "INCORRECT" << std::endl;
+        }
+    } catch (const std::exception& e) {
+        std::cerr << "FAILURE: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
+}
