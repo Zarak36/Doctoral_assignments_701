@@ -1,0 +1,102 @@
+#include <iostream>
+#include <fstream>
+#include <vector>
+#include <thread>
+
+void readMatrix(const std::string& filename,
+std::vector<std::vector<int>>& matrix) {
+    std::ifstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file");
+    }
+
+    int value;
+    std::vector<int> row;
+    while (file >> value) {
+        row.push_back(value);
+        if (file.peek() == '\n' || file.eof()) {
+            matrix.push_back(row);
+            row.clear();
+        }
+    }
+
+    file.close();
+}
+
+void writeMatrix(const std::string& filename, const
+std::vector<std::vector<int>>& matrix) {
+    std::ofstream file(filename);
+    if (!file.is_open()) {
+        throw std::runtime_error("Could not open file");
+    }
+
+    for (const auto& row : matrix) {
+        for (const auto& value : row) {
+            file << value << " ";
+        }
+        file << "\n";
+    }
+
+    file.close();
+}
+
+void addMatrices(const std::vector<std::vector<int>>& A, const
+std::vector<std::vector<int>>& B, std::vector<std::vector<int>>& C,
+int startRow, int endRow) {
+    for (int i = startRow; i < endRow; ++i) {
+        for (int j = 0; j < A[0].size(); ++j) {
+            C[i][j] = A[i][j] + B[i][j];
+        }
+    }
+}
+
+int main(int argc, char* argv[]) {
+    if (argc != 9 || std::string(argv[1]) != "-a" ||
+std::string(argv[3]) != "-b" || std::string(argv[5]) != "-c" ||
+std::string(argv[7]) != "-n") {
+        std::cerr << "Usage: " << argv[0] << " -a <fileA> -b <fileB>
+-c <fileC> -n <num_threads>" << std::endl;
+        return 1;
+    }
+
+    std::string fileA = argv[2];
+    std::string fileB = argv[4];
+    std::string fileC = argv[6];
+    int numThreads = std::stoi(argv[8]);
+
+    std::vector<std::vector<int>> A, B, C;
+
+    try {
+        readMatrix(fileA, A);
+        readMatrix(fileB, B);
+
+        if (A.size() != B.size() || A[0].size() != B[0].size()) {
+            throw std::runtime_error("Matrices dimensions do not match");
+        }
+
+        C.resize(A.size(), std::vector<int>(A[0].size()));
+
+        std::vector<std::thread> threads;
+        int rowsPerThread = A.size() / numThreads;
+
+        for (int i = 0; i < numThreads; ++i) {
+            int startRow = i * rowsPerThread;
+            int endRow = (i == numThreads - 1) ? A.size() : startRow +
+rowsPerThread;
+            threads.emplace_back(addMatrices, std::ref(A),
+std::ref(B), std::ref(C), startRow, endRow);
+        }
+
+        for (auto& thread : threads) {
+            thread.join();
+        }
+
+        writeMatrix(fileC, C);
+        std::cout << "SUCCESS" << std::endl;
+    } catch (const std::exception& e) {
+        std::cerr << "FAILURE: " << e.what() << std::endl;
+        return 1;
+    }
+
+    return 0;
+}
